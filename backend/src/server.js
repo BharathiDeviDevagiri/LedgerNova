@@ -39,7 +39,7 @@ async function bootstrap() {
 
     console.log('[LedgerLine] PostgreSQL connected.');
 
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT, '0.0.0.0', () => {
       console.log('======================================');
       console.log(`LedgerLine API running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
