@@ -1,0 +1,231 @@
+// LedgerLine - PostgreSQL / Prisma Schema
+// Snovasys Fresher Hiring Challenge 2026
+//
+// Monetary convention: 1 INR = 100 paise.
+// All monetary values are stored as BigInt.
+// Currency support: INR only in the initial release.
+//
+// Accounting normal balances:
+// ASSET, EXPENSE: DEBIT - CREDIT
+// LIABILITY, EQUITY, REVENUE: CREDIT - DEBIT
+//
+// Every POSTED transaction must have:
+// 1. At least one debit and one credit.
+// 2. Equal debit and credit totals.
+// 3. Total equal to Transaction.totalAmount.
+// 4. Account balances matching their ledger entries.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  ACCOUNT_HOLDER
+  AUDITOR
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum PermissionLevel {
+  OWNER
+  MANAGER
+  VIEWER
+}
+
+enum TransactionStatus {
+  PENDING
+  POSTED
+  FAILED
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+enum IdempotencyStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  fullName     String   @db.VarChar(120)
+  role         Role     @default(ACCOUNT_HOLDER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accountPermissions    AccountPermission[]
+  initiatedTransactions Transaction[]       @relation("TransactionInitiator")
+  auditLogs             AuditLog[]          @relation("UserAuditLogs")
+  idempotencyKeys       IdempotencyKey[]
+
+  @@map("users")
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  accountNumber String        @unique @db.VarChar(32)
+  name          String        @db.VarChar(120)
+  type          AccountType
+  status        AccountStatus @default(ACTIVE)
+
+  // Cached balance in paise.
+  // PostgreSQL triggers will verify it against ledger entries.
+  balance  BigInt @default(0)
+  currency String @default("INR") @db.VarChar(3)
+  version  Int    @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions   AccountPermission[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([status])
+  @@index([type])
+  @@map("accounts")
+}
+
+model AccountPermission {
+  id         String          @id @default(uuid())
+  userId     String
+  accountId  String
+  permission PermissionLevel @default(VIEWER)
+  grantedAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId])
+  @@index([userId])
+  @@index([accountId])
+  @@map("account_permissions")
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  referenceNumber String            @unique @db.VarChar(64)
+  description     String            @db.VarChar(500)
+  status          TransactionStatus @default(PENDING)
+
+  // Total transaction amount in paise.
+  totalAmount BigInt
+
+  // Authenticated user who initiated the operation.
+  actorId String
+
+  // Full reversal only: one reversal per original transaction.
+  reversalOfId String? @unique
+
+  postedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  actor User @relation("TransactionInitiator", fields: [actorId], references: [id], onDelete: Restrict)
+
+  ledgerEntries LedgerEntry[]
+
+  reversalOf Transaction? @relation("TransactionReversals", fields: [reversalOfId], references: [id], onDelete: Restrict)
+
+  reversals Transaction[] @relation("TransactionReversals")
+
+  @@index([actorId, createdAt])
+  @@index([status, createdAt])
+  @@map("transactions")
+}
+
+model LedgerEntry {
+  id            String    @id @default(uuid())
+  transactionId String
+  accountId     String
+  type          EntryType
+
+  // Strictly positive amount in paise.
+  amount BigInt
+
+  // Account balance immediately after this entry.
+  runningBalance BigInt
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId, createdAt, id])
+  @@index([transactionId])
+  @@map("ledger_entries")
+}
+
+model IdempotencyKey {
+  id          String @id @default(uuid())
+  key         String @db.VarChar(128)
+  userId      String
+  requestPath String @db.VarChar(200)
+  requestHash String @db.VarChar(64)
+
+  status         IdempotencyStatus @default(PENDING)
+  responseStatus Int?
+  responseBody   Json?
+
+  lockedAt  DateTime?
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key, requestPath])
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+model AuditLog {
+  id     String  @id @default(uuid())
+  userId String?
+
+  action     String @db.VarChar(100)
+  entityType String @db.VarChar(80)
+  entityId   String @db.VarChar(100)
+
+  oldValues Json?
+  newValues Json?
+
+  ipAddress String? @db.VarChar(45)
+  userAgent String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  user User? @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
