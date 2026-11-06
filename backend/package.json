@@ -27,8 +27,8 @@
     "express",
     "postgresql"
   ],
-"author": "Bharathi Devi"
-  "license": "ISC",
+"author": "Bharathi Devi",
+"license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
