@@ -1,111 +1,301 @@
-﻿# LedgerNova - Core Double-Entry Banking & Ledger Platform
-> Snovasys Fresher Hiring Challenge 2026
+# LedgerNova – Digital Banking & Double-Entry Ledger System
 
-LedgerNova is a secure, double-entry financial ledger and banking management platform built with **React**, **Node.js/Express**, **PostgreSQL**, and **Prisma**.
+LedgerNova is a full-stack digital banking and ledger management platform that supports secure account management, deposits, withdrawals, transfers, and double-entry financial transaction tracking.
 
----
+The project demonstrates how financial transactions can be managed using authentication, role-based access control, database transactions, and audit logging.
 
-## ðŸ›ï¸ Architectural Core Principles
+## Project Overview
 
-1. **Strict Double-Entry Accounting**:
-   - Every transaction contains at least two ledger entries.
-   - Sum of debits must strictly equal the sum of credits ($\sum \text{Debits} = \sum \text{Credits}$).
-   - No direct balance manipulation: balances are driven by immutable ledger entries.
+LedgerNova provides a platform where users can manage accounts and perform financial transactions while maintaining structured debit and credit records.
 
-2. **Integer Paise Monetary Storage**:
-   - All monetary values are stored as integers (`BigInt` in PostgreSQL / Prisma) in **paise** ($â‚¹1.00 = 100 \text{ paise}$).
-   - Eliminates floating-point rounding errors ($0.1 + 0.2 \neq 0.3$).
+The application uses a React frontend, Node.js and Express backend, and PostgreSQL database to manage financial data.
 
-3. **Account-Level Authorization & Role-Based Access**:
-   - **ADMIN**: System administration, user onboarding, global audits, account creation.
-   - **ACCOUNT_HOLDER**: Scoped strictly to accounts granted via `AccountPermission` (`OWNER`, `MANAGER`, `VIEWER`).
-   - **AUDITOR**: Read-only access to assigned accounts and transaction details, plus system-wide audit-log access.
+## Features
 
-4. **Concurrency Safety & Idempotency**:
-   - **Pessimistic Concurrency Control**: PostgreSQL account-row locks are acquired in deterministic ID order before balances are checked or updated. The account `version` is incremented but is not used as an optimistic concurrency check.
-   - **Idempotency Keys**: Request deduplication table to eliminate double-spend risks during network retries.
-   - **Append-Only Ledger**: Transactions and ledger entries are append-only and immutable.
-   - **Audit Trail**: Every administrative and state-changing action is captured in `AuditLog`.
+### Authentication & Authorization
+- User registration and login.
+- JWT-based authentication.
+- Role-based access control.
+- Support for Admin, Account Holder, and Auditor roles.
+- Protected API routes.
 
----
+### Account Management
+- Create and manage accounts.
+- View account information.
+- Track account balances.
 
-## ðŸ“ Repository Structure
+### Financial Transactions
+- Deposit money into accounts.
+- Withdraw money from accounts.
+- Transfer money between accounts.
+- Maintain transaction records.
+- Generate account statements.
 
-```
+### Ledger Management
+- Double-entry bookkeeping with debit and credit records.
+- Store monetary values using integer paise to avoid floating-point precision errors.
+- Idempotency checks to help prevent duplicate transaction processing.
+- PostgreSQL transactions and database locking for transaction consistency.
+- Audit logging for important operations.
+
+### Database Management
+- PostgreSQL relational database.
+- Prisma ORM.
+- Database migrations.
+- Database-level transaction constraints.
+
+## Technology Stack
+
+| Component | Technologies |
+|---|---|
+| Frontend | React.js, Vite, JavaScript |
+| Backend | Node.js, Express.js |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Authentication | JSON Web Tokens (JWT) |
+| API | REST API |
+| Testing | Node.js Test Runner |
+| Deployment | Render |
+| Version Control | Git and GitHub |
+
+## Project Structure
+
+```text
 LedgerNova/
-â”œâ”€â”€ backend/
-â”‚   â”œâ”€â”€ prisma/
-â”‚   â”‚   â””â”€â”€ schema.prisma         # PostgreSQL schema (Users, Accounts, Ledger, etc.)
-â”‚   â”œâ”€â”€ src/
-â”‚   â”‚   â”œâ”€â”€ config/
-â”‚   â”‚   â”‚   â””â”€â”€ prisma.js         # Prisma client instance + BigInt JSON serializer
-â”‚   â”‚   â”œâ”€â”€ middleware/
-â”‚   â”‚   â”‚   â”œâ”€â”€ accountAuth.js    # Account-level permission check middleware
-â”‚   â”‚   â”‚   â””â”€â”€ errorHandler.js   # Centralized HTTP error handling
-â”‚   â”‚   â”œâ”€â”€ routes/
-â”‚   â”‚   â”‚   â””â”€â”€ health.routes.js  # Database & server health probe
-â”‚   â”‚   â”œâ”€â”€ app.js                # Express app configuration & middleware
-â”‚   â”‚   â””â”€â”€ server.js             # HTTP server entrypoint
-â”‚   â”œâ”€â”€ .env                      # Backend local environment config
-â”‚   â”œâ”€â”€ .env.example              # Sample environment template
-â”‚   â”œâ”€â”€ .gitignore
-â”‚   â””â”€â”€ package.json              # Node.js backend dependencies & scripts
-â”œâ”€â”€ frontend/
-â”‚   â”œâ”€â”€ public/
-â”‚   â”œâ”€â”€ src/
-â”‚   â”‚   â”œâ”€â”€ App.jsx               # Initial LedgerLine overview dashboard
-â”‚   â”‚   â”œâ”€â”€ App.css
-â”‚   â”‚   â”œâ”€â”€ index.css             # Theme styling
-â”‚   â”‚   â””â”€â”€ main.jsx              # React DOM entry point
-â”‚   â”œâ”€â”€ index.html
-â”‚   â”œâ”€â”€ vite.config.js            # Vite config with /api proxy to backend
-â”‚   â”œâ”€â”€ .env.example
-â”‚   â”œâ”€â”€ .gitignore
-â”‚   â””â”€â”€ package.json              # Frontend dependencies
-â”œâ”€â”€ docker-compose.yml            # PostgreSQL 16 container definition
-â””â”€â”€ README.md
+│
+├── backend/
+│   ├── prisma/
+│   │   ├── migrations/
+│   │   └── schema.prisma
+│   ├── src/
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   └── utils/
+│   ├── integration/
+│   ├── package.json
+│   └── .env.example
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── .env.example
+│
+├── docker-compose.yml
+├── .gitignore
+└── README.md
 ```
 
----
+## Prerequisites
 
-## ðŸš€ Setup & Execution Guide (PowerShell)
+Install the following before running the application:
 
-### Step 1: Start PostgreSQL via Docker Compose
-In your root `LedgerNova` directory:
-```powershell
+- Node.js (LTS version recommended).
+- npm.
+- Docker Desktop.
+- Git.
+
+## Installation and Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/BharathiDeviDevagiri/LedgerNova.git
+```
+
+Navigate into the project:
+
+```bash
+cd LedgerNova
+```
+
+### 2. Start the Database
+
+Start the database service using Docker Compose:
+
+```bash
 docker compose up -d
 ```
-Verify the container is healthy:
-```powershell
-docker compose ps
-```
 
-### Step 2: Set Up Backend & Run Prisma Migrations
-Open a new PowerShell terminal:
-```powershell
+### 3. Configure the Backend
+
+Open a terminal:
+
+```bash
 cd backend
 npm install
-npx prisma migrate dev --name init_ledgernova_schema
-npx prisma generate
-npm run dev
 ```
-Backend will be live at: `http://localhost:5000`
-Health endpoint: `http://localhost:5000/api/health`
 
-To create local demo users, set unique values for `LEDGERNOVA_SEED_HOLDER_PASSWORD`,
-`LEDGERNOVA_SEED_ADMIN_PASSWORD`, and `LEDGERNOVA_SEED_AUDITOR_PASSWORD` in
-`backend/.env`, then run `npm run db:seed` from `backend`. Use passwords of at
-least 12 characters. The seed script will not print passwords and refuses to
-run when `NODE_ENV=production`. Seeded user emails are
-`demouser@ledgernova.internal`, `admin@ledgernova.internal`, and
-`auditor@ledgernova.internal`; use the values you set to sign in. The script
-does not rotate passwords for accounts that already exist.
+Create a `.env` file using `.env.example` as a reference.
 
-### Step 3: Set Up & Run Frontend
-Open another PowerShell terminal:
-```powershell
+Configure the required environment variables:
+
+```env
+NODE_ENV=development
+PORT=5000
+DATABASE_URL=your_postgresql_connection_string
+JWT_SECRET=your_secure_random_secret
+CORS_ORIGIN=http://localhost:5173
+```
+
+Do not commit your `.env` file or expose database credentials and JWT secrets.
+
+### 4. Apply Database Migrations
+
+Run:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+
+### 5. Start the Backend
+
+```bash
+npm start
+```
+
+The backend API should be available at:
+
+```text
+http://localhost:5000
+```
+
+Health check:
+
+```text
+http://localhost:5000/api/health
+```
+
+### 6. Configure and Start the Frontend
+
+Open another terminal:
+
+```bash
 cd frontend
 npm install
+```
+
+Create a `.env` file using the frontend `.env.example`:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
+Start the frontend:
+
+```bash
 npm run dev
 ```
-Frontend will be live at: `http://localhost:5173`
+
+Open the application:
+
+```text
+http://localhost:5173
+```
+
+## Testing
+
+The backend includes unit and integration tests.
+
+Navigate to the backend directory:
+
+```bash
+cd backend
+```
+
+Run unit tests:
+
+```bash
+npm run test:unit
+```
+
+Run integration tests:
+
+```bash
+npm run test:integration
+```
+
+Run the complete test suite:
+
+```bash
+npm run test:all
+```
+
+The integration tests require a correctly configured test database.
+
+## Deployment
+
+The application is deployed using Render.
+
+**Frontend:**  
+https://ledgernova-frontend.onrender.com
+
+**Backend API:**  
+https://ledgernova.onrender.com
+
+**Backend Health Check:**  
+https://ledgernova.onrender.com/api/health
+
+The frontend communicates with the backend through the configured `VITE_API_BASE_URL` environment variable.
+
+The backend uses environment variables for database connectivity, authentication, and CORS configuration.
+
+Note: The current deployment uses Render's free services. Free services may sleep after inactivity, and the free PostgreSQL database has an expiration period.
+
+## Security and Reliability
+
+LedgerNova implements several measures to improve transaction reliability and application security:
+
+- JWT-based authentication.
+- Role-based authorization.
+- Input validation.
+- Secure password handling.
+- Helmet security middleware.
+- CORS configuration.
+- Idempotency checks.
+- Database transactions and locking.
+- Database-level constraints.
+- Audit logging.
+
+These measures improve application security and transaction consistency, but do not guarantee protection against every security threat.
+
+## Current Limitations and Future Improvements
+
+The following improvements are planned:
+
+- Configure a dedicated least-privilege PostgreSQL application role.
+- Improve transaction reversal validation.
+- Implement cryptographic hash-chain verification for tamper-evident audit records.
+- Introduce shared storage for rate limiting across multiple backend instances.
+- Add additional end-to-end testing.
+- Improve monitoring and production deployment reliability.
+
+## Learning Outcomes
+
+Through this project, I gained practical experience in:
+
+- Full-stack application development.
+- REST API development.
+- Database design and PostgreSQL.
+- Authentication and role-based authorization.
+- Financial transaction processing.
+- Double-entry bookkeeping concepts.
+- Database transactions and concurrency handling.
+- Unit and integration testing.
+- Git, GitHub, and cloud deployment.
+
+## Author
+
+**Bharathi Devi Devagiri**
+
+B.Tech – Artificial Intelligence and Data Science
+
+GitHub: https://github.com/BharathiDeviDevagiri
+
+LinkedIn: https://linkedin.com/in/bharathidevi-devagiri-116b08325
+
+---
+
+**LedgerNova – Secure Transactions. Reliable Records.**
